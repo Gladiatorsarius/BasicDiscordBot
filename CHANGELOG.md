@@ -1,3 +1,13 @@
+## v1.0.0 (2026-09-13)
+
+### BREAKING CHANGE
+
+- Changed Implementation from Class to Cog
+
+### Feat
+
+- **BasicDiscordBot.py**: Replaced Class Implementation with cog
+
 ## v0.2.0 (2026-09-12)
 
 ### Feat
