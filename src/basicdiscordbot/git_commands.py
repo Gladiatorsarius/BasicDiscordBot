@@ -3,23 +3,23 @@ import re
 
 
 def git_fetch():
-    git_fetch = subprocess.run(['git', 'fetch'], capture_output=True, text=True)
+    git_fetch = subprocess.run(['git', 'fetch' ,'--tags' ], capture_output=True, text=True)
     return git_fetch.stdout.strip()
 
 
-def git_differences(Type: str):
+def git_differences(difference_Type: str):
     git_fetch()
-    if Type == "long_hash":
+    if difference_Type == "long_hash":
         git_log = subprocess.run(['git', 'log', 'HEAD..@{u}', '--format=%H'], capture_output=True, text=True)
-    elif Type == "commit_message":
+    elif difference_Type == "commit_message":
         git_log = subprocess.run(['git', 'log', 'HEAD..@{u}', '--format=%s'], capture_output=True, text=True)
-    elif Type == "short_hash":
+    elif difference_Type == "short_hash":
         git_log = subprocess.run(['git', 'log', 'HEAD..@{u}', '--format=%h'], capture_output=True, text=True)
-    elif Type == "short_hash_with_commit_message":
+    elif difference_Type == "short_hash_with_commit_message":
         git_log = subprocess.run(['git', 'log', 'HEAD..@{u}', '--format=%h %s'], capture_output=True, text=True)
-    elif Type == "commit_count":
+    elif difference_Type == "commit_count":
         git_log = subprocess.run(['git', 'rev-list', '--count', 'HEAD..@{u}'], capture_output=True, text=True)
-    if Type != "commit_count":
+    if difference_Type != "commit_count":
         return git_log.stdout.strip().splitlines()
     return git_log.stdout.strip()
 
@@ -33,14 +33,32 @@ def git_show(file):
     git_show = subprocess.run(['git', 'show', file], capture_output=True, text=True)
     return git_show.stdout.strip()
 
-def get_remote_version() -> str | None:
-    try:
-        git_fetch()
-        Do_Not_Disturb_content = git_show("origin/main:Do_Not_Disturb.py")
-        Version = re.search(r"__Version__\s*=\s*['\"]([^'\"]+)['\"]", Do_Not_Disturb_content).group(1)
-        return Version
-    except Exception:
-        return None
+def get_version(version_Type: str) -> str | None:
+    if version_Type == "Remote":
+        try:
+            result = subprocess.run(
+                ["git", "tag", "--merged", "@{u}", "--no-merged", "HEAD"],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            tags = [tag.strip() for tag in result.stdout.strip().splitlines() if tag.strip()]
+            latest_tag = tags[-1] if tags else None
+        except (subprocess.CalledProcessError, FileNotFoundError) as e:
+            latest_tag = None
+        return latest_tag
+    elif version_Type == "Local":
+        try:
+            result = subprocess.run(
+                ["git", "describe", "--tags", "--abbrev=0"],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            return result.stdout.strip() or None
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            return None
+
 
 
 def author_name():
@@ -57,8 +75,8 @@ def git_pull():
     git_pull = subprocess.run(['git', 'pull'], capture_output=True, text=True)
     return git_pull.stdout.strip()        
 
-def git_diff(type: str):
+def git_diff(difference_Type: str):
     git_fetch()
-    if type == "stat":
+    if difference_Type == "stat":
         git_diff_stat = subprocess.run(['git', 'diff', '--stat', 'HEAD..@{u}'], capture_output=True, text=True)
         return git_diff_stat.stdout.strip()

@@ -6,6 +6,7 @@ from . import git_commands
 import subprocess
 from discord import app_commands
 from pathlib import Path
+import asyncio
 
 class BasicDiscordBot(commands.Cog):
     def __init__(
@@ -16,7 +17,9 @@ class BasicDiscordBot(commands.Cog):
         original_author_id: int = None,
         original_author_name: str = None,
         testing: bool = False,
-        version: str = None,
+        systemctl_name: str = None,
+        auto_restart: bool = False,
+        auto_pull: bool = False
     ):
         self.client = client
 
@@ -25,15 +28,18 @@ class BasicDiscordBot(commands.Cog):
         self.Original_Source_Code_URL = original_source_code_url
         self.Original_Author_ID = original_author_id
         self.Original_Author_Name = original_author_name
-        self.Version = version
-    
-        self.testing = testing
+        self.BotVersion = git_commands.get_version("Local")
+        self.GitVersion = self.BotVersion
+        self.Testing = testing
 
+        self.systemctl_name = systemctl_name
+        self.auto_restart = auto_restart
+        self.auto_pull = auto_pull
 
     async def cog_load(self):
         try:
             dev_guild = await self.client.fetch_guild(self.Dev_Guild_ID) if self.Dev_Guild_ID is not None else None
-            if not self.testing:
+            if not self.Testing:
                 synced_Global = await self.client.tree.sync()
                 if self.Dev_Guild_ID is not None:
                     synced_Guild = await self.client.tree.sync(guild=discord.Object(id=self.Dev_Guild_ID))
@@ -55,11 +61,11 @@ class BasicDiscordBot(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
-        if not self.testing:
-            if self.Version is not None:
-                await self.send_team_dm(f"Bot Started Successfully. Version: {self.Version}")
-                print(f'Logged in as {self.client.user.name}. Version: {self.Version }')
-            elif self.Version is None:
+        if not self.Testing:
+            if self.BotVersion is not None:
+                await self.send_team_dm(f"Bot Started Successfully. Version: {self.BotVersion}")
+                print(f'Logged in as {self.client.user.name}. Version: {self.BotVersion }')
+            elif self.BotVersion is None:
                 await self.send_team_dm(f"Bot Started Successfully.")
                 print(f'Logged in as {self.client.user.name}')
             if not self.update_git.is_running():
@@ -78,17 +84,6 @@ class BasicDiscordBot(commands.Cog):
             return self.check_team_member(interaction.user.id)
         return app_commands.check(predicate)
 
-    async def send_team_dm(self, message: str):
-        for member_id in self.team_member_ids:
-            member = await self.client.fetch_user(member_id)
-            if member:
-                try:
-                    await member.send(message)
-                except Exception as e:
-                    print(f"Failed to send DM to {member.name}: {e}")
-
-
-
     async def get_Team_members(self):
         self.team_member_ids = []
         info = await self.client.application_info()
@@ -100,10 +95,21 @@ class BasicDiscordBot(commands.Cog):
             owner = info.owner
             self.team_member_ids.append(owner.id)
 
+    async def send_team_dm(self, message: str, embed: discord.Embed = None):
+        for member_id in self.team_member_ids:
+            member = await self.client.fetch_user(member_id)
+            if member:
+                try:
+                    if embed:
+                        await member.send(message, embed=embed)
+                    else:
+                        await member.send(message)
+                except Exception as e:
+                    print(f"Failed to send DM to {member.name}: {e}")
     
     @tasks.loop(seconds=1)
     async def restart_helper(self):
-        if self.testing:
+        if self.Testing:
             base_dir = Path.cwd()
             shutdown_file = base_dir / "shutdown.txt"
             restart_file = base_dir / "restart.txt"
@@ -123,14 +129,38 @@ class BasicDiscordBot(commands.Cog):
 
     @restart_helper.before_loop
     async def before_restart_helper(self):
-        if not self.testing:
+        if not self.Testing:
             self.restart_helper.stop()
         await self.client.wait_until_ready()
 
+    async def _delayed_restart(self, delay: int = 10):
+        await asyncio.sleep(delay)
+
+        await asyncio.create_subprocess_exec("systemctl", "restart", self.systemctl_name)
+
+    async def restart_systemctl_task(self):
+        asyncio.create_task(self._delayed_restart(delay=10))
+
     @tasks.loop(minutes=30)
     async def update_git(self):
-        pass
+        newest_tag = git_commands.get_remote_version()
+        if newest_tag is not None:
+            if self.GitVersion != newest_tag:
+                if self.auto_pull:
+                    git_commands.git_pull()
+                    GitVersion = git_commands.get_version("Local")
+                    if GitVersion == newest_tag:
+                        if self.systemctl_name:
+                            if self.auto_restart:
+                                await self.restart_systemctl_task()
+                                await self.send_team_dm(f"Bot pulled the latest version {newest_tag} and is restarting.")
+                            else:
+                                await self.send_team_dm(f"Bot pulled the latest version {newest_tag}. Please restart the bot manually.")
+                        else:
+                            await self.send_team_dm(f"Bot pulled the latest version {newest_tag}. Please restart the bot manually.")
+                    
+                
+            
 
 
-    #else:
 
