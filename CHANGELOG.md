@@ -1,3 +1,9 @@
+## v1.1.0 (2026-09-14)
+
+### Feat
+
+- **BasicDiscordBot.py**: Added Startup flow fixed restart_helper task and added getting team member ids
+
 ## v1.0.0 (2026-09-13)
 
 ### BREAKING CHANGE
