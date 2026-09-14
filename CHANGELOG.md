@@ -1,3 +1,9 @@
+## v1.2.0 (2026-09-14)
+
+### Feat
+
+- added auto pull and restart funktions
+
 ## v1.1.0 (2026-09-14)
 
 ### Feat
