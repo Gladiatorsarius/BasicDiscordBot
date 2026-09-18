@@ -196,6 +196,12 @@ class BasicDiscordBot(commands.Cog):
                         else:
                             await self.send_developer_anouncments(f"Bot pulled the latest version {newest_tag}. Please restart the bot manually.")
 
+    @update_git.before_loop
+    async def before_update_git(self):
+        if self.Testing:
+            self.update_git.stop()
+        await self.client.wait_until_ready()
+
     @app_commands.command(name="info", description="Get information about the current version of the bot.")
     async def info(self, interaction: discord.Interaction):
         embed = discord.Embed(title="Bot Information", color=discord.Color.blue())
