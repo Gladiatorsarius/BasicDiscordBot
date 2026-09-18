@@ -1,3 +1,9 @@
+## v1.3.0 (2026-09-18)
+
+### Feat
+
+- **BasicDiscordBot.py**: Added Info command and fixed app command syncing
+
 ## v1.2.0 (2026-09-14)
 
 ### Feat
