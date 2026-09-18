@@ -1,3 +1,13 @@
+## v2.0.0 (2026-09-18)
+
+### BREAKING CHANGE
+
+- removed decorator for app commands
+
+### Feat
+
+- **git_commands,BasicDiscordBot**: added auto changelog sending and team announcments
+
 ## v1.3.0 (2026-09-18)
 
 ### Feat
