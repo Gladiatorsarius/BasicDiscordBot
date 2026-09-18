@@ -2,6 +2,7 @@ import discord
 import os
 from discord.ext import commands, tasks
 from types import SimpleNamespace
+
 from . import git_commands
 import subprocess
 from discord import app_commands
@@ -14,18 +15,20 @@ class BasicDiscordBot(commands.Cog):
         client: commands.Bot,
         dev_guild_id: int= None,
         original_source_code_url: str = None,
-        original_author_id: int = None,
-        original_author_name: str = None,
         testing: bool = False,
         systemctl_name: str = None,
         auto_restart: bool = False,
         auto_pull: bool = False,
-        send_developer_infos: bool = True
+        send_developer_infos: bool = True,
+        developer_announcment_channel_id: int = None,
+        changelog_channel_id: int = None
     ):
         self.client = client
 
         self.Dev_Guild_ID = dev_guild_id
-    
+        self.Developer_Announcment_Channel_ID = developer_announcment_channel_id
+        self.Changelog_Channel_ID = changelog_channel_id
+
         self.Original_Source_Code_URL = original_source_code_url
         self.BotVersion = git_commands.get_version("Local")
         self.GitVersion = self.BotVersion
@@ -46,10 +49,10 @@ class BasicDiscordBot(commands.Cog):
     async def on_ready(self):
         if not self.Testing:
             if self.BotVersion is not None:
-                await self.send_team_dm(f"Bot Started Successfully. Version: {self.BotVersion}")
+                await self.send_developer_anouncments(f"Bot Started Successfully. Version: {self.BotVersion}")
                 print(f'Logged in as {self.client.user.name}. Version: {self.BotVersion }')
             elif self.BotVersion is None:
-                await self.send_team_dm(f"Bot Started Successfully.")
+                await self.send_developer_anouncments(f"Bot Started Successfully.")
                 print(f'Logged in as {self.client.user.name}')
             if not self.update_git.is_running():
                 self.update_git.start()
@@ -88,11 +91,6 @@ class BasicDiscordBot(commands.Cog):
     def check_team_member(self, user_id: int) -> bool:
         return user_id in self.team_member_ids
 
-    def is_team_member(self):
-        async def predicate(self, interaction: discord.Interaction):
-            return self.check_team_member(interaction.user.id)
-        return app_commands.check(predicate)
-
     async def get_Team_members(self):
         self.team_member_ids = []
         info = await self.client.application_info()
@@ -104,17 +102,46 @@ class BasicDiscordBot(commands.Cog):
             owner = info.owner
             self.team_member_ids.append(owner.id)
 
-    async def send_team_dm(self, message: str, embed: discord.Embed = None):
-        for member_id in self.team_member_ids:
-            member = await self.client.fetch_user(member_id)
-            if member:
+    async def send_developer_anouncment(self, message: str, embed: discord.Embed = None):
+        if self.Developer_Announcment_Channel_ID is not None:
+            channel = self.client.get_channel(self.Developer_Announcment_Channel_ID)
+            if channel:
                 try:
                     if embed:
-                        await member.send(message, embed=embed)
+                        await channel.send(message, embed=embed)
                     else:
-                        await member.send(message)
+                        await channel.send(message)
                 except Exception as e:
-                    print(f"Failed to send DM to {member.name}: {e}")
+                    print(f"Failed to send message to announcement channel: {e}")
+        else:
+            for member_id in self.team_member_ids:
+                member = await self.client.fetch_user(member_id)
+                if member:
+                    try:
+                        if embed:
+                            await member.send(message, embed=embed)
+                        else:
+                            await member.send(message)
+                    except Exception as e:
+                        print(f"Failed to send DM to {member.name}: {e}")
+
+    async def send_change_log(self, changelog_text: str = None):
+        if self.Changelog_Channel_ID is not None:
+            channel = self.client.get_channel(self.Changelog_Channel_ID)
+            if channel:
+                if changelog_text:
+                    changelog = git_commands.parse_changelog_diff(changelog_text)
+                else:
+                    changelog = git_commands.view_changelogmd()
+                print(f"Changelog: {changelog}")
+                embed = discord.Embed(title=f"Changelog for Version {changelog['version']}", description=f"Release Date: {changelog['date']}", color=discord.Color.blue())
+                for change in changelog["changes"]:
+                    change_type = change["type"]
+                    change_content = "\n".join(change["content"])
+                    embed.add_field(name=change_type, value=change_content, inline=False)
+                await channel.send(embed=embed)
+                
+                
     
     @tasks.loop(seconds=1)
     async def restart_helper(self):
@@ -156,17 +183,18 @@ class BasicDiscordBot(commands.Cog):
         if newest_tag is not None:
             if self.GitVersion != newest_tag:
                 if self.auto_pull:
+                    await self.send_change_log()
                     git_commands.git_pull()
                     GitVersion = git_commands.get_version("Local")
                     if GitVersion == newest_tag:
                         if self.systemctl_name:
                             if self.auto_restart:
                                 await self.restart_systemctl_task()
-                                await self.send_team_dm(f"Bot pulled the latest version {newest_tag} and is restarting.")
+                                await self.send_developer_anouncments(f"Bot pulled the latest version {newest_tag} and is restarting.")
                             else:
-                                await self.send_team_dm(f"Bot pulled the latest version {newest_tag}. Please restart the bot manually.")
+                                await self.send_developer_anouncments(f"Bot pulled the latest version {newest_tag}. Please restart the bot manually.")
                         else:
-                            await self.send_team_dm(f"Bot pulled the latest version {newest_tag}. Please restart the bot manually.")
+                            await self.send_developer_anouncments(f"Bot pulled the latest version {newest_tag}. Please restart the bot manually.")
 
     @app_commands.command(name="info", description="Get information about the current version of the bot.")
     async def info(self, interaction: discord.Interaction):
@@ -182,8 +210,7 @@ class BasicDiscordBot(commands.Cog):
             if self.Original_Source_Code_URL != self.git_url_origin:
                 embed.add_field(name="Original Source Code", value=f"This Bot was Modified you can find the Original Source Code [here]({self.Original_Source_Code_URL})", inline=False)
         await interaction.response.send_message(embed=embed, ephemeral=True)
-
-            
+        
             
         
 

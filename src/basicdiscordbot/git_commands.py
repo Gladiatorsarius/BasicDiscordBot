@@ -6,23 +6,6 @@ def git_fetch():
     git_fetch = subprocess.run(['git', 'fetch' ,'--tags' ], capture_output=True, text=True)
     return git_fetch.stdout.strip()
 
-
-def git_differences(difference_Type: str):
-    git_fetch()
-    if difference_Type == "long_hash":
-        git_log = subprocess.run(['git', 'log', 'HEAD..@{u}', '--format=%H'], capture_output=True, text=True)
-    elif difference_Type == "commit_message":
-        git_log = subprocess.run(['git', 'log', 'HEAD..@{u}', '--format=%s'], capture_output=True, text=True)
-    elif difference_Type == "short_hash":
-        git_log = subprocess.run(['git', 'log', 'HEAD..@{u}', '--format=%h'], capture_output=True, text=True)
-    elif difference_Type == "short_hash_with_commit_message":
-        git_log = subprocess.run(['git', 'log', 'HEAD..@{u}', '--format=%h %s'], capture_output=True, text=True)
-    elif difference_Type == "commit_count":
-        git_log = subprocess.run(['git', 'rev-list', '--count', 'HEAD..@{u}'], capture_output=True, text=True)
-    if difference_Type != "commit_count":
-        return git_log.stdout.strip().splitlines()
-    return git_log.stdout.strip()
-
 def git_url_origin():
     git_fetch()
     git_url_origin = subprocess.run(['git', 'remote', 'get-url', 'origin'], capture_output=True, text=True)
@@ -59,24 +42,65 @@ def get_version(version_Type: str) -> str | None:
         except (subprocess.CalledProcessError, FileNotFoundError):
             return None
 
-
-
-def author_name():
-    url_origin = git_url_origin()
-    return url_origin.split('/')[-2]
-
-def commit_links():
-    url_origin = git_url_origin()
-    long_hashes = git_differences("long_hash")
-    return [f"{url_origin}/commit/{long_hash}" for long_hash in long_hashes]
-
 def git_pull():
     git_fetch()
     git_pull = subprocess.run(['git', 'pull'], capture_output=True, text=True)
     return git_pull.stdout.strip()        
 
-def git_diff(difference_Type: str):
+
+def parse_changelog_diff(clean_text: str) -> dict:
+    """Parses clean Markdown text into a structured dictionary."""
+    parsed_data = {
+        "version": None,
+        "date": None,
+        "changes": [],  # List of {"type": ..., "content": [...]}
+    }
+
+    current_type = None
+
+    for line in clean_text.splitlines():
+        line_str = line.strip()
+        if not line_str:
+            continue
+
+        # Match version header, e.g., ## v1.3.0 (2026-09-18)
+        version_match = re.match(r"^##\s*(v?[\d\.]+)\s*(?:\((.*?)\))?", line_str)
+        if version_match:
+            parsed_data["version"] = version_match.group(1)
+            parsed_data["date"] = version_match.group(2)
+            continue
+
+        # Match category header, e.g., ### Feat, ### Fix, ### BREAKING CHANGE
+        type_match = re.match(r"^###\s*(.+)", line_str)
+        if type_match:
+            current_type = type_match.group(1).strip()
+            parsed_data["changes"].append({"type": current_type, "content": []})
+            continue
+
+        # Match bullet points under the current category
+        if current_type and (
+            line_str.startswith("- ") or line_str.startswith("* ")
+        ):
+            parsed_data["changes"][-1]["content"].append(line_str)
+
+    return parsed_data
+
+
+def view_changelogmd() -> dict:
     git_fetch()
-    if difference_Type == "stat":
-        git_diff_stat = subprocess.run(['git', 'diff', '--stat', 'HEAD..@{u}'], capture_output=True, text=True)
-        return git_diff_stat.stdout.strip()
+
+    res = subprocess.run(
+        ["git", "diff", "HEAD..@{u}", "--", "changelog.md"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    plain_markdown_lines = []
+    for line in res.stdout.splitlines():
+        if line.startswith("+") and not line.startswith("+++"):
+            plain_markdown_lines.append(line[1:])
+
+    plain_text = "\n".join(plain_markdown_lines)
+
+    return parse_changelog_diff(plain_text)
