@@ -1,3 +1,9 @@
+## v2.0.1 (2026-09-18)
+
+### Fix
+
+- **BasicDiscordBot.py**: added before update git task funktion
+
 ## v2.0.0 (2026-09-18)
 
 ### BREAKING CHANGE
