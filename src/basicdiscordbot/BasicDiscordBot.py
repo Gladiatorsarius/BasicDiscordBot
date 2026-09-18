@@ -49,10 +49,10 @@ class BasicDiscordBot(commands.Cog):
     async def on_ready(self):
         if not self.Testing:
             if self.BotVersion is not None:
-                await self.send_developer_anouncments(f"Bot Started Successfully. Version: {self.BotVersion}")
+                await self.send_developer_anouncment(f"Bot Started Successfully. Version: {self.BotVersion}")
                 print(f'Logged in as {self.client.user.name}. Version: {self.BotVersion }')
             elif self.BotVersion is None:
-                await self.send_developer_anouncments(f"Bot Started Successfully.")
+                await self.send_developer_anouncment(f"Bot Started Successfully.")
                 print(f'Logged in as {self.client.user.name}')
             if not self.update_git.is_running():
                 self.update_git.start()
@@ -190,11 +190,11 @@ class BasicDiscordBot(commands.Cog):
                         if self.systemctl_name:
                             if self.auto_restart:
                                 await self.restart_systemctl_task()
-                                await self.send_developer_anouncments(f"Bot pulled the latest version {newest_tag} and is restarting.")
+                                await self.send_developer_anouncment(f"Bot pulled the latest version {newest_tag} and is restarting.")
                             else:
-                                await self.send_developer_anouncments(f"Bot pulled the latest version {newest_tag}. Please restart the bot manually.")
+                                await self.send_developer_anouncment(f"Bot pulled the latest version {newest_tag}. Please restart the bot manually.")
                         else:
-                            await self.send_developer_anouncments(f"Bot pulled the latest version {newest_tag}. Please restart the bot manually.")
+                            await self.send_developer_anouncment(f"Bot pulled the latest version {newest_tag}. Please restart the bot manually.")
 
     @update_git.before_loop
     async def before_update_git(self):
@@ -208,7 +208,7 @@ class BasicDiscordBot(commands.Cog):
         if self.BotVersion is not None:
             embed.add_field(name="Bot Version", value=self.BotVersion, inline=False)
         if self.git_url_origin is not None:
-            embed.add_field(name="Original Source Code", value=f"[Link]({self.git_url_origin})", inline=False)
+            embed.add_field(name="Source Code", value=f"[Link]({self.git_url_origin})", inline=False)
         if self.send_developer_infos and self.team_member_ids:
             team_member_mentions = [f"<@{member_id}>" for member_id in self.team_member_ids]
             embed.add_field(name="Developers", value=", ".join(team_member_mentions), inline=False)
