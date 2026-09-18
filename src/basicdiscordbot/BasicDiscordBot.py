@@ -11,7 +11,7 @@ import asyncio
 class BasicDiscordBot(commands.Cog):
     def __init__(
         self,
-        client,
+        client: commands.Bot,
         dev_guild_id: int= None,
         original_source_code_url: str = None,
         original_author_id: int = None,
@@ -19,15 +19,14 @@ class BasicDiscordBot(commands.Cog):
         testing: bool = False,
         systemctl_name: str = None,
         auto_restart: bool = False,
-        auto_pull: bool = False
+        auto_pull: bool = False,
+        send_developer_infos: bool = True
     ):
         self.client = client
 
         self.Dev_Guild_ID = dev_guild_id
     
         self.Original_Source_Code_URL = original_source_code_url
-        self.Original_Author_ID = original_author_id
-        self.Original_Author_Name = original_author_name
         self.BotVersion = git_commands.get_version("Local")
         self.GitVersion = self.BotVersion
         self.Testing = testing
@@ -36,27 +35,11 @@ class BasicDiscordBot(commands.Cog):
         self.auto_restart = auto_restart
         self.auto_pull = auto_pull
 
+        self.send_developer_infos = send_developer_infos
+        self.git_url_origin = git_commands.git_url_origin()
+
+
     async def cog_load(self):
-        try:
-            dev_guild = await self.client.fetch_guild(self.Dev_Guild_ID) if self.Dev_Guild_ID is not None else None
-            if not self.Testing:
-                synced_Global = await self.client.tree.sync()
-                if self.Dev_Guild_ID is not None:
-                    synced_Guild = await self.client.tree.sync(guild=discord.Object(id=self.Dev_Guild_ID))
-                    print(f"Synced {len(synced_Global)} global commands and {len(synced_Guild)} to {dev_guild.name}.")
-                else:
-                    print(f"Synced {len(synced_Global)} global commands.")
-            else:
-                if self.Dev_Guild_ID is None:
-                    raise ValueError("In testing mode, you must provide a Dev_Guild_ID to sync commands to a specific guild.")
-                self.client.tree.copy_global_to(guild=discord.Object(id=self.Dev_Guild_ID))
-                synced_guild = await self.client.tree.sync(guild=discord.Object(id=self.Dev_Guild_ID))
-                print(f"Synced {len(synced_guild)} commands to {dev_guild.name}.")
-                self.client.tree.clear_commands(guild=None)
-                await self.client.tree.sync()
-                print("Cleared global commands.")
-        except Exception as e:
-            print(f"Error syncing commands: {e}")
         await self.get_Team_members()
 
     @commands.Cog.listener()
@@ -75,6 +58,32 @@ class BasicDiscordBot(commands.Cog):
                 self.restart_helper.start()
             print(f'Logged in as {self.client.user.name} in testing mode.')
 
+    async def sync_commands(self):
+        try:
+            dev_guild = await self.client.fetch_guild(self.Dev_Guild_ID) if self.Dev_Guild_ID is not None else None
+            if not self.Testing:
+                synced_Global = await self.client.tree.sync()
+                if self.Dev_Guild_ID is not None:
+                    synced_Guild = await self.client.tree.sync(guild=discord.Object(id=self.Dev_Guild_ID))
+                    return f"Synced {len(synced_Global)} global commands and {len(synced_Guild)} to {dev_guild.name}."
+                else:
+                    return f"Synced {len(synced_Global)} global commands."
+            else:
+                if self.Dev_Guild_ID is None:
+                    raise ValueError("In testing mode, you must provide a Dev_Guild_ID to sync commands to a specific guild.")
+                self.client.tree.copy_global_to(guild=discord.Object(id=self.Dev_Guild_ID))
+                synced_guild = await self.client.tree.sync(guild=discord.Object(id=self.Dev_Guild_ID))
+                self.client.tree.clear_commands(guild=None)
+                await self.client.tree.sync()
+                return f"Synced {len(synced_guild)} commands to {dev_guild.name}.\nCleared global commands."
+        except Exception as e:
+            return f"Error syncing commands: {e}"
+
+    
+    @commands.command(name="SyncCommands", description="Syncs the bot's commands with Discord.")
+    async def sync_commands_command(self, ctx: commands.Context):
+        commands = await self.sync_commands()
+        await ctx.send(commands)
 
     def check_team_member(self, user_id: int) -> bool:
         return user_id in self.team_member_ids
@@ -158,9 +167,25 @@ class BasicDiscordBot(commands.Cog):
                                 await self.send_team_dm(f"Bot pulled the latest version {newest_tag}. Please restart the bot manually.")
                         else:
                             await self.send_team_dm(f"Bot pulled the latest version {newest_tag}. Please restart the bot manually.")
-                    
-                
+
+    @app_commands.command(name="info", description="Get information about the current version of the bot.")
+    async def info(self, interaction: discord.Interaction):
+        embed = discord.Embed(title="Bot Information", color=discord.Color.blue())
+        if self.BotVersion is not None:
+            embed.add_field(name="Bot Version", value=self.BotVersion, inline=False)
+        if self.git_url_origin is not None:
+            embed.add_field(name="Original Source Code", value=f"[Link]({self.git_url_origin})", inline=False)
+        if self.send_developer_infos and self.team_member_ids:
+            team_member_mentions = [f"<@{member_id}>" for member_id in self.team_member_ids]
+            embed.add_field(name="Developers", value=", ".join(team_member_mentions), inline=False)
+        if self.Original_Source_Code_URL is not None:
+            if self.Original_Source_Code_URL != self.git_url_origin:
+                embed.add_field(name="Original Source Code", value=f"This Bot was Modified you can find the Original Source Code [here]({self.Original_Source_Code_URL})", inline=False)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
             
+            
+        
 
 
 
