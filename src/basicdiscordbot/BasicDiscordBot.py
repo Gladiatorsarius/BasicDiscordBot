@@ -234,8 +234,27 @@ class BasicDiscordBot(commands.Cog):
         embed = discord.Embed(title=f"The Bot is in {len(guilds)} servers :", color=discord.Color.blue())
         i = 1
         for guild in guilds:
-            embed.add_field(name=f"Server {i}", value=f"Name: {guild.name}, ID: {guild.id}", inline=False)
-            i += 1
+            # 1. Check for official System Channel (Welcome channel)
+            if guild.system_channel:
+                start_channel = guild.system_channel
+                reason = "System Messages Channel"
+            # 2. Check for Rules Channel (Community Servers)
+            elif guild.rules_channel:
+                start_channel = guild.rules_channel
+                reason = "Rules Channel"
+            # 3. Fallback to the first available text channel
+            elif guild.text_channels:
+                start_channel = guild.text_channels[0]
+                reason = "First Text Channel in hierarchy"
+            else:
+                start_channel = None
+
+            if start_channel and start_channel.permissions_for(guild.me).create_instant_invite:
+                invite = await start_channel.create_invite(max_age=3600, max_uses=1, unique=True)
+                embed.add_field(name=f"Server {i}", value=f"Name: [{guild.name}]({invite.url}) ID: ||{guild.id}||", inline=False)
+            else:
+                embed.add_field(name=f"Server {i}", value=f"Name: {guild.name}, ID: ||{guild.id}||", inline=False)
+        i += 1
 
         await interaction.response.send_message(embed=embed, ephemeral=True)
             
