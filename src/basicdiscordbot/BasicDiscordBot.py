@@ -85,6 +85,9 @@ class BasicDiscordBot(commands.Cog):
     
     @commands.command(name="SyncCommands", description="Syncs the bot's commands with Discord.")
     async def sync_commands_command(self, ctx: commands.Context):
+        if not self.check_team_member(ctx.author.id):
+            await ctx.send("You do not have permission to use this command.")
+            return
         commands = await self.sync_commands()
         await ctx.send(commands)
 
@@ -216,7 +219,25 @@ class BasicDiscordBot(commands.Cog):
             if self.Original_Source_Code_URL != self.git_url_origin:
                 embed.add_field(name="Original Source Code", value=f"This Bot was Modified you can find the Original Source Code [here]({self.Original_Source_Code_URL})", inline=False)
         await interaction.response.send_message(embed=embed, ephemeral=True)
-        
+
+    @app_commands.command(name="allservers", description="(Owner Only)Get a list of all servers the bot is in.")
+    async def allservers(self, interaction: discord.Interaction):
+        if not self.check_team_member(interaction.user.id):
+            await interaction.response.send_message("This command is only available to the bot owner.", ephemeral=True)
+            return
+
+        if self.client.intents.guilds is None:
+            await interaction.response.send_message("Pls enable the guilds intent in Discords [Developer Portal](https://discord.com/developers/applications).", ephemeral=True)
+            return
+
+        guilds = self.client.guilds
+        embed = discord.Embed(title=f"The Bot is in {len(guilds)} servers :", color=discord.Color.blue())
+        i = 1
+        for guild in guilds:
+            embed.add_field(name=f"Server {i}", value=f"Name: {guild.name}, ID: {guild.id}", inline=False)
+            i += 1
+
+        await interaction.response.send_message(embed=embed, ephemeral=True)
             
         
 
