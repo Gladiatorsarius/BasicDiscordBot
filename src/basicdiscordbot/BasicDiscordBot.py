@@ -198,6 +198,8 @@ class BasicDiscordBot(commands.Cog):
                                 await self.send_developer_anouncment(f"Bot pulled the latest version {newest_tag}. Please restart the bot manually.")
                         else:
                             await self.send_developer_anouncment(f"Bot pulled the latest version {newest_tag}. Please restart the bot manually.")
+                else: 
+                    await self.send_developer_anouncment(f"A new version {newest_tag} is available. Please pull the latest changes and restart the bot.")
 
     @update_git.before_loop
     async def before_update_git(self):
