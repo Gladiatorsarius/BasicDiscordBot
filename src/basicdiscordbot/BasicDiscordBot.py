@@ -254,7 +254,7 @@ class BasicDiscordBot(commands.Cog):
                 embed.add_field(name=f"Server {i}", value=f"Name: [{guild.name}]({invite.url}) ID: ||{guild.id}||", inline=False)
             else:
                 embed.add_field(name=f"Server {i}", value=f"Name: {guild.name}, ID: ||{guild.id}||", inline=False)
-        i += 1
+            i += 1
 
         await interaction.response.send_message(embed=embed, ephemeral=True)
             
