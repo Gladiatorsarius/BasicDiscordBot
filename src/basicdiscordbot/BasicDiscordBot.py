@@ -182,7 +182,7 @@ class BasicDiscordBot(commands.Cog):
 
     @tasks.loop(minutes=30)
     async def update_git(self):
-        newest_tag = git_commands.get_remote_version()
+        newest_tag = git_commands.get_version("Remote")
         if newest_tag is not None:
             if self.GitVersion != newest_tag:
                 if self.auto_pull:
