@@ -1,3 +1,9 @@
+## v2.2.3 (2026-09-19)
+
+### Fix
+
+- **BasicDiscordBot.update_git-task**: added fallback when auto pull is false
+
 ## v2.2.2 (2026-09-19)
 
 ### Fix
