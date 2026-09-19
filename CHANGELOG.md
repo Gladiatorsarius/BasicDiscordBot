@@ -1,3 +1,9 @@
+## v2.2.1 (2026-09-19)
+
+### Fix
+
+- **BasicDiscordBot.update_git-task**: fixed version getting for newest tag
+
 ## v2.2.0 (2026-09-19)
 
 ### Feat
