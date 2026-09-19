@@ -1,3 +1,9 @@
+## v2.1.0 (2026-09-19)
+
+### Feat
+
+- Added /allservers to show all servers the bot is in
+
 ## v2.0.2 (2026-09-18)
 
 ### Fix
