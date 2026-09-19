@@ -1,3 +1,9 @@
+## v2.2.2 (2026-09-19)
+
+### Fix
+
+- **BasicDiscordBot./allservers**: fixed intentation issues with i
+
 ## v2.2.1 (2026-09-19)
 
 ### Fix
