@@ -188,16 +188,14 @@ class BasicDiscordBot(commands.Cog):
                 if self.auto_pull:
                     await self.send_change_log()
                     git_commands.git_pull()
-                    GitVersion = git_commands.get_version("Local")
-                    if GitVersion == newest_tag:
+                    self.GitVersion = git_commands.get_version("Local")
+                    if self.GitVersion == newest_tag:
                         if self.systemctl_name:
                             if self.auto_restart:
                                 await self.restart_systemctl_task()
                                 await self.send_developer_anouncment(f"Bot pulled the latest version {newest_tag} and is restarting.")
-                            else:
-                                await self.send_developer_anouncment(f"Bot pulled the latest version {newest_tag}. Please restart the bot manually.")
-                        else:
-                            await self.send_developer_anouncment(f"Bot pulled the latest version {newest_tag}. Please restart the bot manually.")
+                                return
+                        await self.send_developer_anouncment(f"Bot pulled the latest version {newest_tag}. Please restart the bot manually.")
                 else: 
                     await self.send_developer_anouncment(f"A new version {newest_tag} is available. Please pull the latest changes and restart the bot.")
 
