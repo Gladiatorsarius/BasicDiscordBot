@@ -1,3 +1,9 @@
+## v2.2.4 (2026-10-19)
+
+### Fix
+
+- **basicdiscordbot.updategit**: fixed update_git by using self.gitVersion variable
+
 ## v2.2.3 (2026-09-19)
 
 ### Fix
