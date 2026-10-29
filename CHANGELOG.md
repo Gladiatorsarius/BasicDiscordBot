@@ -1,3 +1,9 @@
+## v2.2.5 (2026-10-29)
+
+### Fix
+
+- **Main.py**: rewrote implementation
+
 ## v2.2.4 (2026-10-19)
 
 ### Fix

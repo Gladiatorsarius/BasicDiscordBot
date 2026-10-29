@@ -132,7 +132,7 @@ wheels = [
 
 [[package]]
 name = "basicdiscordbot"
-version = "2.2.4"
+version = "2.2.5"
 source = { editable = "." }
 dependencies = [
     { name = "discord-py" },
